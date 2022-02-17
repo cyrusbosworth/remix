@@ -1,6 +1,15 @@
 import React, { ReactNode } from 'react';
-import { Outlet, LiveReload, Link, Links, Meta } from 'remix';
+import {
+  Outlet,
+  LiveReload,
+  Link,
+  Links,
+  Meta,
+  useLoaderData,
+  LoaderFunction,
+} from 'remix';
 import globalStylesUrl from '~/styles/global.css';
+import { getUser } from './utils/session.server';
 
 export const links = () => [{ rel: 'stylesheet', href: globalStylesUrl }];
 
@@ -14,6 +23,14 @@ export const meta = () => {
   };
 };
 
+export const loader: LoaderFunction = async ({ request }) => {
+  const user = await getUser(request);
+
+  const data = {
+    user,
+  };
+  return data;
+};
 export default function App() {
   return (
     <Document>
@@ -47,6 +64,8 @@ function Document({
 }
 
 function Layout({ children }: { children: ReactNode }) {
+  const { user } = useLoaderData();
+  console.log(user);
   return (
     <>
       <nav className='navbar'>
@@ -57,9 +76,34 @@ function Layout({ children }: { children: ReactNode }) {
           <li>
             <Link to='/posts'>Posts</Link>
           </li>
+          {user ? (
+            <li>
+              <form action='/auth/logout' method='POST'>
+                <button className='btn' type='submit'>
+                  Logout {user.username}
+                </button>
+              </form>
+            </li>
+          ) : (
+            <li>
+              <Link to='/auth/login'>Login</Link>
+            </li>
+          )}
         </ul>
       </nav>
       <div className='container'>{children}</div>
     </>
+  );
+}
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  console.log(error);
+  return (
+    <Document>
+      <Layout>
+        <h1>Error</h1>
+        <pre>{error.message}</pre>
+      </Layout>
+    </Document>
   );
 }
